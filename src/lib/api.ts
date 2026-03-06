@@ -48,6 +48,27 @@ export async function adminDeleteProduct(id: string) {
   })
 }
 
+export type Category = { id: string; name: string; createdAt: string }
+
+export async function adminListCategories(): Promise<Category[]> {
+  return await apiFetch('/admin-categories', { headers: adminHeaders() })
+}
+
+export async function adminUpsertCategory(name: string, id?: string): Promise<Category> {
+  return await apiFetch('/admin-categories', {
+    method: 'POST',
+    headers: adminHeaders(),
+    body: JSON.stringify({ id, name }),
+  })
+}
+
+export async function adminDeleteCategory(id: string) {
+  return await apiFetch(`/admin-categories?id=${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    headers: adminHeaders(),
+  })
+}
+
 export async function createOrder(payload: Omit<Order, 'id' | 'createdAt' | 'status'> & { customer: Order['customer'] }) {
   return await apiFetch('/orders', {
     method: 'POST',

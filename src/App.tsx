@@ -9,6 +9,7 @@ import { ReceiptPage } from './pages/ReceiptPage'
 import { AdminLoginPage } from './admin/AdminLoginPage'
 import { AdminProductsPage } from './admin/AdminProductsPage'
 import { AdminOrdersPage } from './admin/AdminOrdersPage'
+import { AdminCategoriesPage } from './admin/AdminCategoriesPage'
 import { RequireAdmin } from './admin/RequireAdmin'
 
 function ScrollToTop() {
@@ -41,6 +42,7 @@ export default function App() {
         >
           <Route index element={<Navigate to="/admin/products" replace />} />
           <Route path="products" element={<AdminProductsPage />} />
+          <Route path="categories" element={<AdminCategoriesPage />} />
           <Route path="orders" element={<AdminOrdersPage />} />
         </Route>
 

@@ -9,6 +9,12 @@ alter table public.products
 
 create index if not exists products_category_idx on public.products(category);
 
+create table if not exists public.categories (
+  id text primary key,
+  name text not null unique,
+  created_at timestamptz not null default now()
+);
+
 -- Optional: if you previously used the old `price` column, you can migrate it to unit_price:
 -- update public.products set unit_price = price where unit_price is null;
 

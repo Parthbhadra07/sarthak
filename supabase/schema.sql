@@ -17,6 +17,12 @@ create table if not exists public.products (
 create index if not exists products_active_idx on public.products(active);
 create index if not exists products_category_idx on public.products(category);
 
+create table if not exists public.categories (
+  id text primary key,
+  name text not null unique,
+  created_at timestamptz not null default now()
+);
+
 create table if not exists public.orders (
   id text primary key,
   items jsonb not null,

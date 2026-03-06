@@ -1,6 +1,7 @@
 import type { Handler } from '@netlify/functions'
 import { ok, json, serverError, badRequest } from './lib/http'
 import { supabaseAdmin } from './lib/supabase'
+import { errorMessage } from './lib/errors'
 
 type Product = {
   id: string
@@ -57,7 +58,7 @@ export const handler: Handler = async (event) => {
 
     return ok(products)
   } catch (e) {
-    return serverError(e instanceof Error ? e.message : 'Failed to load products')
+    return serverError(errorMessage(e))
   }
 }
 

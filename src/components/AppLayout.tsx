@@ -87,6 +87,7 @@ export function AppLayout({ admin = false }: { admin?: boolean }) {
               {isAdmin && (
                 <>
                   <TabLink to="/admin/products" label="Products" />
+                  <TabLink to="/admin/categories" label="Categories" />
                   <TabLink to="/admin/orders" label="Orders" />
                   <button
                     className="btn"

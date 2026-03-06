@@ -3,6 +3,7 @@ import { badRequest, json, notFound, ok, serverError, parseJsonBody } from './li
 import { newId } from './lib/ids'
 import { sendOrderNotificationToBusiness, sendReceiptToCustomer } from './lib/whatsapp'
 import { supabaseAdmin } from './lib/supabase'
+import { errorMessage } from './lib/errors'
 
 type CartItem = {
   productId: string
@@ -172,7 +173,7 @@ export const handler: Handler = async (event) => {
 
     return badRequest('Unsupported method')
   } catch (e) {
-    return serverError(e instanceof Error ? e.message : 'Failed')
+    return serverError(errorMessage(e))
   }
 }
 

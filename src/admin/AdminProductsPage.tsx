@@ -1,6 +1,6 @@
 import React from 'react'
 import type { Product } from '../types'
-import { adminDeleteProduct, adminListProducts, adminUpsertProduct } from '../lib/api'
+import { adminDeleteProduct, adminListCategories, adminListProducts, adminUpsertProduct, type Category } from '../lib/api'
 
 function formatMoney(n: number) {
   return new Intl.NumberFormat(undefined, { style: 'currency', currency: 'INR' }).format(n)
@@ -8,9 +8,11 @@ function formatMoney(n: number) {
 
 export function AdminProductsPage() {
   const [products, setProducts] = React.useState<Product[]>([])
+  const [categories, setCategories] = React.useState<Category[]>([])
   const [loading, setLoading] = React.useState(true)
   const [error, setError] = React.useState('')
 
+  const [editingId, setEditingId] = React.useState<string>('')
   const [category, setCategory] = React.useState('')
   const [name, setName] = React.useState('')
   const [unitPrice, setUnitPrice] = React.useState<number>(0)
@@ -26,6 +28,7 @@ export function AdminProductsPage() {
     try {
       const data = await adminListProducts()
       setProducts(data)
+      setCategories(await adminListCategories())
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load products')
     } finally {
@@ -42,6 +45,7 @@ export function AdminProductsPage() {
     setError('')
     try {
       await adminUpsertProduct({
+        id: editingId || undefined,
         category: category.trim() || undefined,
         name: name.trim(),
         unitPrice: Number(unitPrice) || undefined,
@@ -51,19 +55,36 @@ export function AdminProductsPage() {
         description: description.trim() || undefined,
         active: true,
       })
-      setCategory('')
-      setName('')
-      setUnitPrice(0)
-      setBoxPrice(0)
-      setTaxPct(0)
-      setImageUrl('')
-      setDescription('')
+      onResetForm()
       await load()
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to save product')
     } finally {
       setSaving(false)
     }
+  }
+
+  const onResetForm = () => {
+    setEditingId('')
+    setCategory('')
+    setName('')
+    setUnitPrice(0)
+    setBoxPrice(0)
+    setTaxPct(0)
+    setImageUrl('')
+    setDescription('')
+  }
+
+  const onEdit = (p: Product) => {
+    setEditingId(p.id)
+    setCategory(p.category || '')
+    setName(p.name)
+    setUnitPrice(p.unitPrice || 0)
+    setBoxPrice(p.boxPrice || 0)
+    setTaxPct(p.taxPct || 0)
+    setImageUrl(p.imageUrl || '')
+    setDescription(p.description || '')
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   const onDelete = async (id: string) => {
@@ -77,6 +98,8 @@ export function AdminProductsPage() {
     }
   }
 
+  const priceWithTax = (price: number) => price + (price * (taxPct || 0)) / 100
+
   return (
     <div className="grid" style={{ gap: 16 }}>
       <div>
@@ -85,15 +108,24 @@ export function AdminProductsPage() {
       </div>
 
       <div className="card" style={{ padding: 12 }}>
-        <strong>Add product</strong>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12, flexWrap: 'wrap' }}>
+          <strong>{editingId ? 'Edit product' : 'Add product'}</strong>
+          {editingId && (
+            <button className="btn" onClick={onResetForm}>
+              Cancel edit
+            </button>
+          )}
+        </div>
         <div style={{ marginTop: 10, display: 'grid', gap: 10 }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            <input
-              className="input"
-              placeholder="Category (example: Grocery)"
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-            />
+            <select className="input" value={category} onChange={(e) => setCategory(e.target.value)}>
+              <option value="">Select category (optional)</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.name}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
             <input className="input" placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} />
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
@@ -101,7 +133,7 @@ export function AdminProductsPage() {
               className="input"
               type="number"
               min={0}
-              placeholder="Unit price (without tax)"
+              placeholder="Unit price (without tax), e.g. 50"
               value={unitPrice}
               onChange={(e) => setUnitPrice(Number(e.target.value))}
             />
@@ -109,7 +141,7 @@ export function AdminProductsPage() {
               className="input"
               type="number"
               min={0}
-              placeholder="Box price (without tax)"
+              placeholder="Box price (without tax), e.g. 500"
               value={boxPrice}
               onChange={(e) => setBoxPrice(Number(e.target.value))}
             />
@@ -117,10 +149,14 @@ export function AdminProductsPage() {
               className="input"
               type="number"
               min={0}
-              placeholder="Tax %"
+              placeholder="Tax %, e.g. 5"
               value={taxPct}
               onChange={(e) => setTaxPct(Number(e.target.value))}
             />
+          </div>
+          <div className="muted" style={{ fontSize: 12 }}>
+            Price with tax: {unitPrice > 0 ? `Unit ${formatMoney(priceWithTax(unitPrice))}` : ''}{' '}
+            {boxPrice > 0 ? `Box ${formatMoney(priceWithTax(boxPrice))}` : ''}
           </div>
           <input
             className="input"
@@ -140,7 +176,7 @@ export function AdminProductsPage() {
             disabled={saving || !name.trim() || (!(Number(unitPrice) > 0) && !(Number(boxPrice) > 0))}
             onClick={onAdd}
           >
-            {saving ? 'Saving…' : 'Add product'}
+            {saving ? 'Saving…' : editingId ? 'Update product' : 'Add product'}
           </button>
         </div>
       </div>
@@ -204,6 +240,9 @@ export function AdminProductsPage() {
                   )}
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
+                  <button className="btn" onClick={() => onEdit(p)}>
+                    Edit
+                  </button>
                   <button className="btn" onClick={() => onDelete(p.id)}>
                     Delete
                   </button>

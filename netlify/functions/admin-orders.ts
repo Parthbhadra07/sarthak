@@ -2,6 +2,7 @@ import type { Handler } from '@netlify/functions'
 import { verifyAdminTokenFromEvent } from './lib/auth'
 import { badRequest, json, ok, serverError, unauthorized } from './lib/http'
 import { supabaseAdmin } from './lib/supabase'
+import { errorMessage } from './lib/errors'
 
 type CartItem = { productId: string; name: string; price: number; qty: number }
 type OrderTotals = { subtotal: number; discount: number; tax: number; total: number }
@@ -65,7 +66,7 @@ export const handler: Handler = async (event) => {
 
     return badRequest('Unsupported method')
   } catch (e) {
-    return serverError(e instanceof Error ? e.message : 'Failed')
+    return serverError(errorMessage(e))
   }
 }
 
