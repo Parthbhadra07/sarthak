@@ -80,6 +80,12 @@ export async function getOrder(orderId: string): Promise<Order> {
   return await apiFetch(`/orders?id=${encodeURIComponent(orderId)}`)
 }
 
+export type OrderLookup = Pick<Order, 'id' | 'status' | 'createdAt' | 'totals'>
+
+export async function searchOrdersByPhone(phone: string): Promise<OrderLookup[]> {
+  return await apiFetch(`/orders?phone=${encodeURIComponent(phone)}`)
+}
+
 export async function adminListOrders(): Promise<Order[]> {
   return await apiFetch('/admin-orders', { headers: adminHeaders() })
 }

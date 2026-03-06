@@ -15,6 +15,21 @@ create table if not exists public.categories (
   created_at timestamptz not null default now()
 );
 
--- Optional: if you previously used the old `price` column, you can migrate it to unit_price:
--- update public.products set unit_price = price where unit_price is null;
+-- IMPORTANT: if your old schema had `products.price` as NOT NULL, it will break inserts
+-- because the app now writes to `unit_price`/`box_price` instead of `price`.
+-- Make `price` nullable (and optionally backfill it).
+do $$
+begin
+  if exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'products'
+      and column_name = 'price'
+  ) then
+    execute 'alter table public.products alter column price drop not null';
+    -- Optional backfill: keep old column meaningful
+    execute 'update public.products set price = coalesce(price, unit_price, box_price) where price is null';
+  end if;
+end $$;
 

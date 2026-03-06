@@ -78,9 +78,33 @@ export const handler: Handler = async (event) => {
 
   try {
     if (event.httpMethod === 'GET') {
-      const id = event.queryStringParameters?.id
-      if (!id) return badRequest('Missing id')
       const sb = supabaseAdmin()
+      const id = event.queryStringParameters?.id
+      const phone = event.queryStringParameters?.phone
+
+      // Search by phone (public)
+      if (phone) {
+        const normalized = String(phone).replace(/[^\d+]/g, '')
+        const { data, error } = await sb
+          .from('orders')
+          .select('id,totals,status,created_at,customer')
+          .filter('customer->>phone', 'eq', normalized)
+          .order('created_at', { ascending: false })
+        if (error) throw error
+
+        const results = ((data || []) as Array<Pick<DbOrder, 'id' | 'totals' | 'status' | 'created_at'> & { customer: unknown }>).map(
+          (r) => ({
+            id: String(r.id),
+            totals: r.totals,
+            status: String(r.status) as OrderStatus,
+            createdAt: new Date(r.created_at).toISOString(),
+          }),
+        )
+        return ok(results)
+      }
+
+      // Receipt lookup by id (public)
+      if (!id) return badRequest('Missing id or phone')
       const { data, error } = await sb
         .from('orders')
         .select('id,items,totals,customer,status,created_at')
@@ -112,8 +136,10 @@ export const handler: Handler = async (event) => {
         id: newId('ord'),
         items: body.items.map((i) => ({
           productId: String(i.productId),
+          variant: i.variant === 'box' ? 'box' : 'unit',
           name: String(i.name),
-          price: Number(i.price),
+          unitPrice: Number(i.unitPrice),
+          taxPct: Number(i.taxPct || 0),
           qty: Number(i.qty),
         })),
         totals: {
