@@ -42,7 +42,12 @@ export const handler: Handler = async (event) => {
 
     return badRequest('Unsupported method')
   } catch (e) {
-    return serverError(e instanceof Error ? e.message : 'Failed')
+    const msg = e instanceof Error ? e.message : 'Failed'
+    return serverError(
+      msg.includes('not been configured to use Netlify Blobs')
+        ? 'Netlify Blobs not configured for this deploy. Ensure Functions v2/Blobs are enabled for the site.'
+        : msg,
+    )
   }
 }
 

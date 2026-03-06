@@ -23,7 +23,12 @@ export const handler: Handler = async (event) => {
     const products = await getJson<Product[]>(PRODUCTS_KEY, [])
     return ok(products)
   } catch (e) {
-    return serverError(e instanceof Error ? e.message : 'Failed to load products')
+    const msg = e instanceof Error ? e.message : 'Failed to load products'
+    return serverError(
+      msg.includes('not been configured to use Netlify Blobs')
+        ? 'Netlify Blobs not configured for this deploy. Ensure Functions v2/Blobs are enabled for the site.'
+        : msg,
+    )
   }
 }
 
