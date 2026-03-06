@@ -15,8 +15,9 @@ function isBlobsNotConfigured(err: unknown): boolean {
   return /not been configured|MissingBlobsEnvironment/i.test(msg)
 }
 
-function isNetlifyRuntime() {
-  return Boolean(process.env.NETLIFY)
+/** True when running in deployed Netlify/Lambda (read-only FS). Never use filesystem fallback there. */
+function isReadOnlyRuntime(): boolean {
+  return process.cwd() === '/var/task' || Boolean(process.env.AWS_LAMBDA_FUNCTION_NAME)
 }
 
 function getStoreOrFallback(): ReturnType<typeof getStore> | 'fallback' {
@@ -28,9 +29,8 @@ function getStoreOrFallback(): ReturnType<typeof getStore> | 'fallback' {
     return netlifyStore
   } catch (err) {
     if (isBlobsNotConfigured(err)) {
-      // In real Netlify runtime, Blobs should be configured; do NOT fallback to filesystem.
-      // (Netlify function filesystem is read-only; fallback would crash or be non-persistent.)
-      if (isNetlifyRuntime()) throw err
+      // Lambda/Netlify deploy has read-only FS; fallback would cause ENOENT. Only fallback locally.
+      if (isReadOnlyRuntime()) throw err
       storeMode = 'fallback'
       return 'fallback'
     }
@@ -61,7 +61,7 @@ export async function getJson<T = unknown>(key: string, fallback: T): Promise<T>
     return data as unknown as T
   } catch (err) {
     if (isBlobsNotConfigured(err)) {
-      if (isNetlifyRuntime()) throw err
+      if (isReadOnlyRuntime()) throw err
       storeMode = 'fallback'
       netlifyStore = null
       return getJson(key, fallback)
@@ -82,7 +82,7 @@ export async function setJson(key: string, value: unknown): Promise<void> {
     await store.set(key, value)
   } catch (err) {
     if (isBlobsNotConfigured(err)) {
-      if (isNetlifyRuntime()) throw err
+      if (isReadOnlyRuntime()) throw err
       storeMode = 'fallback'
       netlifyStore = null
       return setJson(key, value)
