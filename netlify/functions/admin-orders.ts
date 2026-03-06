@@ -1,7 +1,7 @@
 import type { Handler } from '@netlify/functions'
-import { getJson, setJson } from './lib/blobs'
 import { verifyAdminTokenFromEvent } from './lib/auth'
 import { badRequest, json, ok, serverError, unauthorized } from './lib/http'
+import { supabaseAdmin } from './lib/supabase'
 
 type CartItem = { productId: string; name: string; price: number; qty: number }
 type OrderTotals = { subtotal: number; discount: number; tax: number; total: number }
@@ -16,7 +16,15 @@ type Order = {
   createdAt: string
 }
 
-const ORDERS_KEY = 'orders.json'
+type DbOrder = {
+  id: string
+  items: CartItem[]
+  totals: OrderTotals
+  customer: Order['customer']
+  status: string
+  created_at: string
+}
+
 const STATUSES: OrderStatus[] = ['new', 'confirmed', 'packed', 'delivered', 'cancelled']
 
 export const handler: Handler = async (event) => {
@@ -25,7 +33,22 @@ export const handler: Handler = async (event) => {
 
   try {
     if (event.httpMethod === 'GET') {
-      const orders = await getJson<Order[]>(ORDERS_KEY, [])
+      const sb = supabaseAdmin()
+      const { data, error } = await sb
+        .from('orders')
+        .select('id,items,totals,customer,status,created_at')
+        .order('created_at', { ascending: false })
+      if (error) throw error
+
+      const orders: Order[] = ((data || []) as DbOrder[]).map((o) => ({
+        id: String(o.id),
+        items: o.items,
+        totals: o.totals,
+        customer: o.customer,
+        status: String(o.status) as OrderStatus,
+        createdAt: new Date(o.created_at).toISOString(),
+      }))
+
       return ok(orders)
     }
 
@@ -34,20 +57,15 @@ export const handler: Handler = async (event) => {
       if (!body?.id || !body.status) return badRequest('Missing id/status')
       if (!STATUSES.includes(body.status)) return badRequest('Invalid status')
 
-      const orders = await getJson<Order[]>(ORDERS_KEY, [])
-      const updated = orders.map((o) => (o.id === body.id ? { ...o, status: body.status } : o))
-      await setJson(ORDERS_KEY, updated)
+      const sb = supabaseAdmin()
+      const { error } = await sb.from('orders').update({ status: body.status }).eq('id', body.id)
+      if (error) throw error
       return ok({ ok: true })
     }
 
     return badRequest('Unsupported method')
   } catch (e) {
-    const msg = e instanceof Error ? e.message : 'Failed'
-    return serverError(
-      msg.includes('not been configured to use Netlify Blobs')
-        ? 'Netlify Blobs not configured for this deploy. Ensure Functions v2/Blobs are enabled for the site.'
-        : msg,
-    )
+    return serverError(e instanceof Error ? e.message : 'Failed')
   }
 }
 

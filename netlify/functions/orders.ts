@@ -1,8 +1,8 @@
 import type { Handler } from '@netlify/functions'
-import { getJson, setJson } from './lib/blobs'
 import { badRequest, json, notFound, ok, serverError, parseJsonBody } from './lib/http'
 import { newId } from './lib/ids'
 import { sendOrderNotificationToBusiness, sendReceiptToCustomer } from './lib/whatsapp'
+import { supabaseAdmin } from './lib/supabase'
 
 type CartItem = { productId: string; name: string; price: number; qty: number }
 type OrderTotals = { subtotal: number; discount: number; tax: number; total: number }
@@ -17,7 +17,14 @@ type Order = {
   createdAt: string
 }
 
-const ORDERS_KEY = 'orders.json'
+type DbOrder = {
+  id: string
+  items: CartItem[]
+  totals: OrderTotals
+  customer: Order['customer']
+  status: string
+  created_at: string
+}
 
 type OrderCreateBody = {
   items: CartItem[]
@@ -51,10 +58,25 @@ export const handler: Handler = async (event) => {
     if (event.httpMethod === 'GET') {
       const id = event.queryStringParameters?.id
       if (!id) return badRequest('Missing id')
-      const orders = await getJson<Order[]>(ORDERS_KEY, [])
-      const found = orders.find((o) => o.id === id)
-      if (!found) return notFound('Order not found')
-      return ok(found)
+      const sb = supabaseAdmin()
+      const { data, error } = await sb
+        .from('orders')
+        .select('id,items,totals,customer,status,created_at')
+        .eq('id', id)
+        .maybeSingle()
+      if (error) throw error
+      if (!data) return notFound('Order not found')
+
+      const row = data as unknown as DbOrder
+      const order: Order = {
+        id: String(row.id),
+        items: row.items,
+        totals: row.totals,
+        customer: row.customer,
+        status: String(row.status) as OrderStatus,
+        createdAt: new Date(row.created_at).toISOString(),
+      }
+      return ok(order)
     }
 
     if (event.httpMethod === 'POST') {
@@ -87,8 +109,16 @@ export const handler: Handler = async (event) => {
         createdAt: now,
       }
 
-      const orders = await getJson<Order[]>(ORDERS_KEY, [])
-      await setJson(ORDERS_KEY, [order, ...orders])
+      const sb = supabaseAdmin()
+      const { error } = await sb.from('orders').insert({
+        id: order.id,
+        items: order.items,
+        totals: order.totals,
+        customer: order.customer,
+        status: order.status,
+        created_at: order.createdAt,
+      })
+      if (error) throw error
 
       const siteUrl =
         process.env.URL || process.env.DEPLOY_PRIME_URL || process.env.DEPLOY_URL || ''
@@ -121,12 +151,7 @@ export const handler: Handler = async (event) => {
 
     return badRequest('Unsupported method')
   } catch (e) {
-    const msg = e instanceof Error ? e.message : 'Failed'
-    return serverError(
-      msg.includes('not been configured to use Netlify Blobs')
-        ? 'Netlify Blobs not configured for this deploy. Ensure Functions v2/Blobs are enabled for the site.'
-        : msg,
-    )
+    return serverError(e instanceof Error ? e.message : 'Failed')
   }
 }
 

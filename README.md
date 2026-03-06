@@ -4,7 +4,7 @@
 - **Catalog website** with tabs: **Catalog**, **Cart**, **Orders**
 - **Checkout** creates an order and shows a **Receipt** page (print/save as PDF)
 - **Admin**: login/logout, add/delete products, view orders, update order status
-- **Persistent storage**: Products + Orders stored in **Netlify Blobs**
+- **Persistent storage**: Products + Orders stored in **Supabase (Postgres)**
 - **WhatsApp Cloud API**:
   - Sends a **new order notification** to your business WhatsApp number
   - Sends a **receipt** to the customer (template if configured; otherwise a best-effort text fallback)
@@ -17,7 +17,7 @@ npm install
 ```
 
 ### 2) Run
-For Netlify Functions + Blobs locally, use Netlify CLI:
+For Netlify Functions locally, use Netlify CLI:
 ```bash
 npm install -g netlify-cli
 netlify dev
@@ -37,8 +37,11 @@ If you run only Vite (`npm run dev`), calls to `/.netlify/functions/*` won’t w
 - `ADMIN_PASSWORD`: the password you’ll use on `/admin/login`
 - `JWT_SECRET`: a long random secret string used to sign tokens
 
-### Netlify Blobs
-No extra env vars are needed when deployed on Netlify. (Blobs are automatically available in functions.)
+### Supabase (required)
+- `SUPABASE_URL`: Supabase project URL
+- `SUPABASE_SERVICE_ROLE_KEY`: Supabase service role key (server-side only; keep secret)
+
+You must create the tables by running [`supabase/schema.sql`](supabase/schema.sql) in the Supabase SQL editor.
 
 ### WhatsApp Cloud API
 Required for sending messages:
