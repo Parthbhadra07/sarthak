@@ -4,8 +4,11 @@ import { supabaseAdmin } from './lib/supabase'
 
 type Product = {
   id: string
+  category?: string
   name: string
-  price: number
+  unitPrice?: number
+  boxPrice?: number
+  taxPct: number
   imageUrl?: string
   description?: string
   active: boolean
@@ -21,14 +24,17 @@ export const handler: Handler = async (event) => {
     const sb = supabaseAdmin()
     const { data, error } = await sb
       .from('products')
-      .select('id,name,price,image_url,description,active,created_at,updated_at')
+      .select('id,category,name,unit_price,box_price,tax_pct,image_url,description,active,created_at,updated_at')
       .order('updated_at', { ascending: false })
     if (error) throw error
 
     type DbProduct = {
       id: string
+      category: string | null
       name: string
-      price: number
+      unit_price: number | null
+      box_price: number | null
+      tax_pct: number | null
       image_url: string | null
       description: string | null
       active: boolean
@@ -37,8 +43,11 @@ export const handler: Handler = async (event) => {
     }
     const products: Product[] = ((data || []) as DbProduct[]).map((p) => ({
       id: String(p.id),
+      category: p.category ?? undefined,
       name: String(p.name),
-      price: Number(p.price),
+      unitPrice: p.unit_price ?? undefined,
+      boxPrice: p.box_price ?? undefined,
+      taxPct: Number(p.tax_pct ?? 0),
       imageUrl: p.image_url ?? undefined,
       description: p.description ?? undefined,
       active: Boolean(p.active),

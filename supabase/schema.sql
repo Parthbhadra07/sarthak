@@ -2,8 +2,11 @@
 
 create table if not exists public.products (
   id text primary key,
+  category text,
   name text not null,
-  price numeric not null check (price >= 0),
+  unit_price numeric,
+  box_price numeric,
+  tax_pct numeric not null default 0 check (tax_pct >= 0),
   image_url text,
   description text,
   active boolean not null default true,
@@ -12,6 +15,7 @@ create table if not exists public.products (
 );
 
 create index if not exists products_active_idx on public.products(active);
+create index if not exists products_category_idx on public.products(category);
 
 create table if not exists public.orders (
   id text primary key,

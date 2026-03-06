@@ -16,9 +16,9 @@ export function CartPage() {
   const [submitting, setSubmitting] = React.useState(false)
   const [error, setError] = React.useState('')
 
-  const tax = 0
   const discount = 0
-  const total = cart.subtotal + tax - discount
+  const tax = cart.tax
+  const total = cart.total - discount
 
   const canSubmit = cart.items.length > 0 && customerName.trim() && phone.trim()
 
@@ -67,7 +67,7 @@ export function CartPage() {
             <div style={{ marginTop: 10, display: 'grid', gap: 10 }}>
               {cart.items.map((i) => (
                 <div
-                  key={i.productId}
+                  key={`${i.productId}:${i.variant}`}
                   style={{
                     display: 'grid',
                     gridTemplateColumns: '1fr auto',
@@ -81,10 +81,11 @@ export function CartPage() {
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
                       <strong>{i.name}</strong>
-                      <span className="muted">{formatMoney(i.price)}</span>
+                      <span className="muted">{formatMoney(i.unitPrice)}</span>
                     </div>
                     <div className="muted" style={{ fontSize: 13, marginTop: 4 }}>
-                      Line total: {formatMoney(i.price * i.qty)}
+                      {i.variant.toUpperCase()} • Tax {i.taxPct}% • Line total:{' '}
+                      {formatMoney(i.unitPrice * i.qty + (i.unitPrice * i.qty * (i.taxPct || 0)) / 100)}
                     </div>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
@@ -93,10 +94,10 @@ export function CartPage() {
                       type="number"
                       min={0}
                       value={i.qty}
-                      onChange={(e) => cart.setQty(i.productId, Number(e.target.value))}
+                      onChange={(e) => cart.setQty(i.productId, i.variant, Number(e.target.value))}
                       style={{ width: 110 }}
                     />
-                    <button className="btn" onClick={() => cart.remove(i.productId)}>
+                    <button className="btn" onClick={() => cart.remove(i.productId, i.variant)}>
                       Remove
                     </button>
                   </div>

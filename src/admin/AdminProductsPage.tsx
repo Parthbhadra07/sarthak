@@ -11,8 +11,11 @@ export function AdminProductsPage() {
   const [loading, setLoading] = React.useState(true)
   const [error, setError] = React.useState('')
 
+  const [category, setCategory] = React.useState('')
   const [name, setName] = React.useState('')
-  const [price, setPrice] = React.useState<number>(0)
+  const [unitPrice, setUnitPrice] = React.useState<number>(0)
+  const [boxPrice, setBoxPrice] = React.useState<number>(0)
+  const [taxPct, setTaxPct] = React.useState<number>(0)
   const [imageUrl, setImageUrl] = React.useState('')
   const [description, setDescription] = React.useState('')
   const [saving, setSaving] = React.useState(false)
@@ -39,14 +42,20 @@ export function AdminProductsPage() {
     setError('')
     try {
       await adminUpsertProduct({
+        category: category.trim() || undefined,
         name: name.trim(),
-        price: Number(price),
+        unitPrice: Number(unitPrice) || undefined,
+        boxPrice: Number(boxPrice) || undefined,
+        taxPct: Number(taxPct) || 0,
         imageUrl: imageUrl.trim() || undefined,
         description: description.trim() || undefined,
         active: true,
       })
+      setCategory('')
       setName('')
-      setPrice(0)
+      setUnitPrice(0)
+      setBoxPrice(0)
+      setTaxPct(0)
       setImageUrl('')
       setDescription('')
       await load()
@@ -78,15 +87,39 @@ export function AdminProductsPage() {
       <div className="card" style={{ padding: 12 }}>
         <strong>Add product</strong>
         <div style={{ marginTop: 10, display: 'grid', gap: 10 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 160px', gap: 10 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <input
+              className="input"
+              placeholder="Category (example: Grocery)"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+            />
             <input className="input" placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} />
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
             <input
               className="input"
               type="number"
               min={0}
-              placeholder="Price"
-              value={price}
-              onChange={(e) => setPrice(Number(e.target.value))}
+              placeholder="Unit price (without tax)"
+              value={unitPrice}
+              onChange={(e) => setUnitPrice(Number(e.target.value))}
+            />
+            <input
+              className="input"
+              type="number"
+              min={0}
+              placeholder="Box price (without tax)"
+              value={boxPrice}
+              onChange={(e) => setBoxPrice(Number(e.target.value))}
+            />
+            <input
+              className="input"
+              type="number"
+              min={0}
+              placeholder="Tax %"
+              value={taxPct}
+              onChange={(e) => setTaxPct(Number(e.target.value))}
             />
           </div>
           <input
@@ -104,7 +137,7 @@ export function AdminProductsPage() {
           />
           <button
             className="btn btnPrimary"
-            disabled={saving || !name.trim() || !(Number(price) > 0)}
+            disabled={saving || !name.trim() || (!(Number(unitPrice) > 0) && !(Number(boxPrice) > 0))}
             onClick={onAdd}
           >
             {saving ? 'Saving…' : 'Add product'}
@@ -154,10 +187,15 @@ export function AdminProductsPage() {
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
                     <strong>{p.name}</strong>
-                    <span style={{ color: 'var(--good)' }}>{formatMoney(p.price)}</span>
+                    <span style={{ color: 'var(--good)' }}>
+                      {p.unitPrice ? `Unit ${formatMoney(p.unitPrice)}` : ''}{' '}
+                      {p.boxPrice ? `Box ${formatMoney(p.boxPrice)}` : ''}
+                    </span>
                   </div>
                   <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
-                    {p.active ? 'Active' : 'Inactive'} • Updated {new Date(p.updatedAt).toLocaleString()}
+                    {(p.category || 'Uncategorized')}{' '}
+                    • Tax {p.taxPct}% • {p.active ? 'Active' : 'Inactive'} • Updated{' '}
+                    {new Date(p.updatedAt).toLocaleString()}
                   </div>
                   {p.description && (
                     <div className="muted" style={{ fontSize: 13, marginTop: 6 }}>

@@ -113,14 +113,16 @@ export function AdminOrdersPage() {
 
                 <div style={{ display: 'grid', gap: 6 }}>
                   {o.items.map((i) => (
-                    <div key={i.productId} style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+                    <div key={`${i.productId}:${i.variant}`} style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
                       <div>
                         <strong>{i.name}</strong>{' '}
                         <span className="muted" style={{ fontSize: 12 }}>
-                          ({i.qty} × {formatMoney(i.price)})
+                          ({i.variant.toUpperCase()} • {i.qty} × {formatMoney(i.unitPrice)} • Tax {i.taxPct}%)
                         </span>
                       </div>
-                      <div className="muted">{formatMoney(i.qty * i.price)}</div>
+                      <div className="muted">
+                        {formatMoney(i.qty * i.unitPrice + (i.qty * i.unitPrice * (i.taxPct || 0)) / 100)}
+                      </div>
                     </div>
                   ))}
                 </div>

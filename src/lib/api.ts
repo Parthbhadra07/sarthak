@@ -33,7 +33,7 @@ export async function adminListProducts(): Promise<Product[]> {
   return await apiFetch('/admin-products', { headers: adminHeaders() })
 }
 
-export async function adminUpsertProduct(product: Partial<Product> & Pick<Product, 'name' | 'price'>) {
+export async function adminUpsertProduct(product: Partial<Product> & Pick<Product, 'name'>) {
   return await apiFetch('/admin-products', {
     method: 'POST',
     headers: adminHeaders(),

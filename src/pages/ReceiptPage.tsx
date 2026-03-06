@@ -93,14 +93,16 @@ export function ReceiptPage() {
               <strong>Items</strong>
               <div style={{ marginTop: 8, display: 'grid', gap: 8 }}>
                 {order.items.map((i) => (
-                  <div key={i.productId} style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+                  <div key={`${i.productId}:${i.variant}`} style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
                     <div>
                       <strong>{i.name}</strong>
                       <div className="muted" style={{ fontSize: 12 }}>
-                        {i.qty} × {formatMoney(i.price)}
+                        {i.variant.toUpperCase()} • {i.qty} × {formatMoney(i.unitPrice)} • Tax {i.taxPct}%
                       </div>
                     </div>
-                    <div>{formatMoney(i.price * i.qty)}</div>
+                    <div>
+                      {formatMoney(i.unitPrice * i.qty + (i.unitPrice * i.qty * (i.taxPct || 0)) / 100)}
+                    </div>
                   </div>
                 ))}
               </div>

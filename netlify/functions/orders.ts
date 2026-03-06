@@ -4,7 +4,14 @@ import { newId } from './lib/ids'
 import { sendOrderNotificationToBusiness, sendReceiptToCustomer } from './lib/whatsapp'
 import { supabaseAdmin } from './lib/supabase'
 
-type CartItem = { productId: string; name: string; price: number; qty: number }
+type CartItem = {
+  productId: string
+  variant: 'unit' | 'box'
+  name: string
+  unitPrice: number
+  taxPct: number
+  qty: number
+}
 type OrderTotals = { subtotal: number; discount: number; tax: number; total: number }
 type OrderStatus = 'new' | 'confirmed' | 'packed' | 'delivered' | 'cancelled'
 
@@ -36,6 +43,15 @@ function fmtMoney(n: number) {
   return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(n)
 }
 
+function lineTax(i: CartItem) {
+  const base = i.unitPrice * i.qty
+  return (base * (i.taxPct || 0)) / 100
+}
+
+function lineTotal(i: CartItem) {
+  return i.unitPrice * i.qty + lineTax(i)
+}
+
 function formatOrderMessage(order: Order, receiptUrl?: string) {
   const lines = [
     `New order: ${order.id}`,
@@ -43,8 +59,13 @@ function formatOrderMessage(order: Order, receiptUrl?: string) {
     order.customer.address ? `Address: ${order.customer.address}` : null,
     '',
     'Items:',
-    ...order.items.map((i) => `- ${i.name} — ${i.qty} × ${fmtMoney(i.price)} = ${fmtMoney(i.qty * i.price)}`),
+    ...order.items.map(
+      (i) =>
+        `- ${i.name} (${i.variant.toUpperCase()}) — ${i.qty} × ${fmtMoney(i.unitPrice)} + Tax ${i.taxPct}% = ${fmtMoney(lineTotal(i))}`,
+    ),
     '',
+    `Subtotal: ${fmtMoney(order.totals.subtotal)}`,
+    `Tax: ${fmtMoney(order.totals.tax)}`,
     `Total: ${fmtMoney(order.totals.total)}`,
     receiptUrl ? `Receipt: ${receiptUrl}` : null,
   ].filter(Boolean) as string[]

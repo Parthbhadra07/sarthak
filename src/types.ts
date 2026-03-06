@@ -1,7 +1,10 @@
 export type Product = {
   id: string
+  category?: string
   name: string
-  price: number
+  unitPrice?: number
+  boxPrice?: number
+  taxPct: number
   imageUrl?: string
   description?: string
   active: boolean
@@ -11,8 +14,10 @@ export type Product = {
 
 export type CartItem = {
   productId: string
+  variant: 'unit' | 'box'
   name: string
-  price: number
+  unitPrice: number
+  taxPct: number
   qty: number
 }
 
